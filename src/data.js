@@ -1,14 +1,12 @@
 /*
  * Curated dictionary of common Chinese characters.
- * Each entry: character -> { pinyin, meaning, examples: [{ word, pinyin, meaning }] }
+ * character -> { pinyin, meaning, examples: [{ word, pinyin, meaning }] }
  *
- * "examples" are common words the character is *used alongside* — the vocabulary
- * that the character lives inside. Pinyin uses tone marks.
- *
- * When a typed character is not in this dictionary, the app falls back to
- * pinyin-pro for the pronunciation and still lets you hear the audio.
+ * "examples" are common words the character is *used alongside*.
+ * For any character not listed here, the app falls back to pinyin-pro
+ * for the pronunciation.
  */
-window.VOCAB_DATA = {
+export const VOCAB_DATA = {
   "你": { pinyin: "nǐ", meaning: "you", examples: [
     { word: "你好", pinyin: "nǐ hǎo", meaning: "hello" },
     { word: "你们", pinyin: "nǐ men", meaning: "you (plural)" },
@@ -34,8 +32,6 @@ window.VOCAB_DATA = {
     { word: "不是", pinyin: "bù shì", meaning: "is not" },
     { word: "不要", pinyin: "bù yào", meaning: "don't want; don't" },
     { word: "不错", pinyin: "bù cuò", meaning: "not bad; pretty good" } ] },
-  "好久": { pinyin: "hǎo jiǔ", meaning: "a long time", examples: [
-    { word: "好久不见", pinyin: "hǎo jiǔ bù jiàn", meaning: "long time no see" } ] },
   "中": { pinyin: "zhōng", meaning: "middle; center; China", examples: [
     { word: "中国", pinyin: "zhōng guó", meaning: "China" },
     { word: "中文", pinyin: "zhōng wén", meaning: "Chinese (language)" },
@@ -179,7 +175,6 @@ window.VOCAB_DATA = {
     { word: "中文", pinyin: "zhōng wén", meaning: "Chinese language" },
     { word: "英文", pinyin: "yīng wén", meaning: "English" },
     { word: "文化", pinyin: "wén huà", meaning: "culture" } ] },
-  "好吃": { pinyin: "hǎo chī", meaning: "delicious", examples: [] },
   "爸": { pinyin: "bà", meaning: "dad", examples: [
     { word: "爸爸", pinyin: "bà ba", meaning: "father; dad" } ] },
   "妈": { pinyin: "mā", meaning: "mom", examples: [
@@ -229,7 +224,6 @@ window.VOCAB_DATA = {
   "很": { pinyin: "hěn", meaning: "very", examples: [
     { word: "很好", pinyin: "hěn hǎo", meaning: "very good" },
     { word: "很多", pinyin: "hěn duō", meaning: "a lot" } ] },
-  "爱好": { pinyin: "ài hào", meaning: "hobby", examples: [] },
   "开": { pinyin: "kāi", meaning: "to open; to start", examples: [
     { word: "开心", pinyin: "kāi xīn", meaning: "happy" },
     { word: "打开", pinyin: "dǎ kāi", meaning: "to open" },
@@ -259,6 +253,5 @@ window.VOCAB_DATA = {
   "下": { pinyin: "xià", meaning: "down; below; next", examples: [
     { word: "下午", pinyin: "xià wǔ", meaning: "afternoon" },
     { word: "下课", pinyin: "xià kè", meaning: "class dismissed" },
-    { word: "下面", pinyin: "xià miàn", meaning: "below; underneath" } ] },
-  "爱心": { pinyin: "ài xīn", meaning: "compassion; loving heart", examples: [] }
+    { word: "下面", pinyin: "xià miàn", meaning: "below; underneath" } ] }
 };

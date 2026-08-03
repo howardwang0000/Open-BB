@@ -1,54 +1,90 @@
-# 汉字 · Chinese Vocabulary Builder
+# 汉字 · Chinese Vocab Builder
 
-A simple, no-install web app to grow your Chinese vocabulary. Write a character,
-hear how it's pronounced, and learn the words it's used alongside.
+A mobile app (iPhone + Android) that grows your Chinese vocabulary by
+**handwriting** characters. Draw a character stroke by stroke, the app
+recognizes it, adds it to your counter, speaks the **pronunciation** aloud, and
+shows you the common words it's **used alongside**.
+
+Built with **React Native (Expo)**.
 
 ## What it does
 
-1. **Write a character** (or word) in the input at the top and click **Add**
-   (or press **Enter**).
-2. It's **added to your list** and the **counter** goes up by one.
-3. You instantly get the **pinyin pronunciation** and can tap **🔊** to hear the
-   **audio**, spoken with your browser's built-in Chinese voice.
-4. You see the common **words it's used alongside** — the vocabulary the
-   character lives inside — each with its own pinyin, meaning, and audio button.
+1. **Write a character by hand** in the writing box (draw the strokes with your
+   finger). Undo the last stroke or clear the pad any time.
+2. Tap **Recognize** — your strokes are sent to Google's handwriting service and
+   you get back the most likely characters.
+3. **Tap the character you wrote.** It's added to your list and the **counter**
+   goes up by one.
+4. You instantly hear the **audio pronunciation** (your phone's built-in Chinese
+   voice) and see the **pinyin**.
+5. Each entry shows the **words it's used alongside** — the vocabulary the
+   character lives inside — each with its own pinyin, meaning, and 🔊 button.
 
-Your list is saved in your browser (localStorage), so it's still there when you
-come back.
+Your list is saved on the device, so it's still there next time you open the app.
 
-## How to run it
+## Running it on your phone (easiest — Expo Go)
 
-No build step, no server needed:
+You'll run it as a real native app on your phone via **Expo Go**. No App Store
+submission needed.
 
-- **Just open `index.html`** in a web browser (double-click it, or drag it into a
-  browser window).
+1. **Install Node.js** (LTS) on your computer if you don't have it:
+   <https://nodejs.org>
+2. **Install the "Expo Go" app** on your phone (from the App Store / Google Play).
+3. In a terminal, from this project folder:
+   ```bash
+   npm install
+   npx expo start
+   ```
+4. A **QR code** appears in the terminal.
+   - **iPhone:** open the **Camera** app and point it at the QR code.
+   - **Android:** open **Expo Go** and use "Scan QR code".
+5. The app opens on your phone. Your computer and phone must be on the **same
+   Wi‑Fi network**. (If it won't connect, run `npx expo start --tunnel`.)
 
-For the best experience use Chrome, Edge, or Safari, which have good built-in
-Chinese text-to-speech voices.
+> The **Recognize** step needs an internet connection (it calls Google's
+> handwriting service). Audio and everything else work offline.
 
-> Tip: if you don't hear audio, your system may not have a Chinese voice
-> installed. On Windows/macOS you can add one in the system speech settings.
+## Building a standalone install (optional)
 
-## Under the hood
+To get a real installable file (an Android **.apk** / **.aab**, or an iOS build)
+you can use Expo's cloud build service (EAS) — no Mac required for Android:
 
-| File | Purpose |
+```bash
+npm install -g eas-cli
+eas build -p android --profile preview   # produces an installable Android app
+```
+
+See <https://docs.expo.dev/build/introduction/> for details. iOS builds require
+an Apple Developer account.
+
+## Project structure
+
+| Path | Purpose |
 |------|---------|
-| `index.html` | Page structure |
-| `styles.css` | Styling |
-| `app.js` | App logic: adding words, the counter, audio, storage |
-| `data.js` | Curated dictionary of common characters (pinyin, meaning, example words) |
+| `App.js` | Main screen: writing pad, counter, candidates, saved list |
+| `src/components/HandwritingCanvas.js` | The stroke-drawing pad (SVG + touch) |
+| `src/components/VocabCard.js` | A learned-character card with audio + examples |
+| `src/recognize.js` | Sends strokes to Google handwriting recognition |
+| `src/speech.js` | Text-to-speech (Chinese voice) |
+| `src/lookup.js` | Pinyin + meaning + example words for a character |
+| `src/data.js` | Curated dictionary of common characters and their words |
+| `src/storage.js` | Saves your list on the device |
 
-- **Audio** uses the browser's built-in `SpeechSynthesis` (Web Speech API) with a
-  Chinese (`zh-CN`) voice — nothing to install.
-- **Pinyin** comes from the curated dictionary for common characters, and falls
-  back to [pinyin-pro](https://github.com/zh-lx/pinyin-pro) (loaded from a CDN)
-  for any other character you type.
-- **Example words** ("used alongside it") come from the curated dictionary. Try
-  common characters like 中, 学, 好, 水, 电 for the richest examples.
+## How it works under the hood
+
+- **Handwriting recognition:** drawn strokes (ink coordinates) are sent to
+  Google Input Tools, the same service used by handwriting keyboards, which
+  returns ranked candidate characters.
+- **Audio:** [`expo-speech`](https://docs.expo.dev/versions/latest/sdk/speech/)
+  uses the device's built-in `zh-CN` text-to-speech voice.
+- **Pinyin:** from the curated dictionary for common characters, falling back to
+  [pinyin-pro](https://github.com/zh-lx/pinyin-pro) for any other character.
+- **Example words** ("used alongside it") come from the curated dictionary in
+  `src/data.js` — easy to extend with more entries.
 
 ## Extending the dictionary
 
-Want more example words for a character? Add an entry to `data.js`:
+Add an entry to `src/data.js`:
 
 ```js
 "学": { pinyin: "xué", meaning: "to study; to learn", examples: [
