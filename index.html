@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>汉字 · Chinese Vocabulary Builder</title>
+  <link rel="preconnect" href="https://cdn.jsdelivr.net" />
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="app">
+    <header class="hero">
+      <h1>汉字 <span class="hero-sub">Chinese Vocabulary Builder</span></h1>
+      <p class="tagline">Write a character, hear how it sounds, and learn the words it lives in.</p>
+    </header>
+
+    <section class="input-card">
+      <label for="charInput" class="input-label">Write a Chinese character or word</label>
+      <div class="input-row">
+        <input
+          id="charInput"
+          type="text"
+          inputmode="text"
+          autocomplete="off"
+          placeholder="e.g.  你  好  学  中国"
+          aria-label="Chinese character input"
+        />
+        <button id="addBtn" class="add-btn" type="button">Add</button>
+      </div>
+      <p id="hint" class="hint">Tip: press <kbd>Enter</kbd> to add. Tap 🔊 anywhere to hear the pronunciation.</p>
+    </section>
+
+    <section class="stats">
+      <div class="counter-card">
+        <div class="counter-number" id="counter">0</div>
+        <div class="counter-label">characters learned</div>
+      </div>
+      <button id="clearBtn" class="clear-btn" type="button" title="Clear everything">Reset list</button>
+    </section>
+
+    <section id="listSection" class="list">
+      <div id="empty" class="empty-state">
+        <div class="empty-emoji">📖</div>
+        <p>Your vocabulary list is empty.<br />Write your first character above to begin.</p>
+      </div>
+      <ul id="vocabList" class="vocab-list"></ul>
+    </section>
+
+    <footer class="foot">
+      <p>Audio uses your browser's built-in Chinese voice. Pinyin by <a href="https://github.com/zh-lx/pinyin-pro" target="_blank" rel="noopener">pinyin-pro</a>.</p>
+    </footer>
+  </div>
+
+  <!-- pinyin-pro provides pinyin for any character; app degrades gracefully if it can't load -->
+  <script src="https://cdn.jsdelivr.net/npm/pinyin-pro@3.26.0/dist/index.js"></script>
+  <script src="data.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
