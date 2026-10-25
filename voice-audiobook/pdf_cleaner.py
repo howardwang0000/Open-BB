@@ -611,6 +611,10 @@ def _build_paragraphs(ordered: list[Line | Paragraph], body_size: float,
         if p.kind == 'heading':
             p.kind = 'h1' if head_sizes and round(p.size) == head_sizes[0] else 'h2'
             p.text = re.sub(r'\s+', ' ', p.text).strip()
+        elif p.kind == 'p' and not _SENTENCE_END_RE.search(p.text) and re.search(r'[\w)\]"\'\u201d\u2019]$', p.text):
+            # A label, sub-heading or list item ("Abstract", "2 Method"): end it like a sentence
+            # so the voice pauses instead of running it into the next paragraph.
+            p.text += '.'
     return paras
 
 

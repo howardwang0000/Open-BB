@@ -411,10 +411,11 @@ def make_paper(path: str) -> tuple[list[str], int]:
         draw_line(c, margin + 40, y, line, ast, w - 2 * margin - 80, last)
 
     body = Style(size=11, leading=13.5, indent=12)
-    expected = [PAPER_TITLE, true_text(PAPER_AUTHORS), 'Abstract', true_text(PAPER_ABSTRACT)]
+    # Unpunctuated labels and sub-headings come out with a full stop so the voice pauses.
+    expected = [PAPER_TITLE, true_text(PAPER_AUTHORS) + '.', 'Abstract.', true_text(PAPER_ABSTRACT)]
     for title, paras in PAPER_SECTIONS:
         flow.heading(title, 11, before=8, after=4)
-        expected.append(title)
+        expected.append(title + '.')
         for p in paras:
             flow.paragraph(p, body)
             expected.append(true_text(p))

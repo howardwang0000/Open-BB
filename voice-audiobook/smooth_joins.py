@@ -93,9 +93,14 @@ def _frame_db(audio: np.ndarray, sr: int) -> tuple[np.ndarray, int]:
 
 
 def _voiced(db: np.ndarray) -> np.ndarray:
+    """Frames that carry speech: within 35 dB of the loudest frame and within 28 dB of
+    the typical speech level (quieter than that is breath, hum or a mumble)."""
     if not len(db):
         return np.zeros(0, dtype=bool)
     threshold = max(db.max() - 35.0, -55.0)
+    loud = db > threshold
+    if loud.any():
+        threshold = max(threshold, float(np.median(db[loud])) - 28.0)
     return db > threshold
 
 
@@ -114,20 +119,28 @@ def _segments(voiced: np.ndarray, hop: int, sr: int, bridge: float = 0.15) -> li
 
 
 def drop_tail_artifact(audio: np.ndarray, sr: int) -> np.ndarray:
-    """Remove a short, quiet blob (breath, mumble) separated from the speech by a pause."""
-    db, hop = _frame_db(audio, sr)
-    voiced = _voiced(db)
-    segs = _segments(voiced, hop, sr)
-    if len(segs) < 2:
-        return audio
-    last, prev = segs[-1], segs[-2]
-    gap = (last[0] - prev[1]) * hop / sr
-    dur = (last[1] - last[0]) * hop / sr
-    speech_dur = (prev[1] - segs[0][0]) * hop / sr
-    main_level = np.median(db[segs[0][0]:prev[1]][voiced[segs[0][0]:prev[1]]])
-    tail_level = np.mean(db[last[0]:last[1]])
-    if gap >= 0.35 and dur <= 0.35 and speech_dur >= 0.8 and tail_level < main_level - 6.0:
-        return audio[:prev[1] * hop]
+    """Remove short blobs (breath, mumble) the model added after the last word.
+
+    A blob goes if it follows a clear pause and is quieter than the speech, or if it is
+    so much quieter (20 dB) that it cannot be a real word, even right after the speech.
+    """
+    for _ in range(3):
+        db, hop = _frame_db(audio, sr)
+        voiced = _voiced(db)
+        segs = _segments(voiced, hop, sr, bridge=0.08)
+        if len(segs) < 2:
+            return audio
+        last, prev = segs[-1], segs[-2]
+        gap = (last[0] - prev[1]) * hop / sr
+        dur = (last[1] - last[0]) * hop / sr
+        speech_dur = (prev[1] - segs[0][0]) * hop / sr
+        main_level = np.median(db[segs[0][0]:prev[1]][voiced[segs[0][0]:prev[1]]])
+        tail_level = np.mean(db[last[0]:last[1]])
+        after_pause = gap >= 0.35 and dur <= 0.35 and tail_level < main_level - 6.0
+        far_too_quiet = dur <= 0.6 and tail_level < main_level - 20.0
+        if speech_dur < 0.8 or not (after_pause or far_too_quiet):
+            return audio
+        audio = audio[:prev[1] * hop]
     return audio
 
 

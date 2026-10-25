@@ -93,6 +93,22 @@ class ChunkTests(unittest.TestCase):
         out, _ = sj.smooth_chunk(raw, SR, 'Words.')
         self.assertLess(len(out) / SR, 1.5 + sj.TAIL_KEEP + 0.05)
 
+    def test_faint_mumble_right_after_speech_is_removed(self):
+        raw = np.concatenate([speech(1.5), silence(0.15), speech(0.2, level_db=-52, seed=6), silence(0.1)])
+        out, _ = sj.smooth_chunk(raw, SR, 'Words.')
+        self.assertLess(len(out) / SR, 1.5 + sj.TAIL_KEEP + 0.05)
+
+    def test_faint_mumble_glued_to_the_last_word_is_removed(self):
+        raw = np.concatenate([speech(1.5), speech(0.3, level_db=-52, seed=7), silence(0.1)])
+        out, _ = sj.smooth_chunk(raw, SR, 'Words.')
+        self.assertLess(len(out) / SR, 1.5 + sj.TAIL_KEEP + 0.05)
+
+    def test_soft_word_ending_is_kept(self):
+        """A quiet final consonant (here 20 dB down) is speech, not a mumble."""
+        raw = np.concatenate([speech(1.5), speech(0.15, level_db=-40, seed=8), silence(0.3)])
+        out, _ = sj.smooth_chunk(raw, SR, 'Words.')
+        self.assertGreater(len(out) / SR, 1.5 + 0.15)
+
     def test_real_short_word_after_a_pause_is_kept(self):
         raw = np.concatenate([speech(1.5), silence(0.5), speech(0.3, level_db=-20, seed=4)])
         out, _ = sj.smooth_chunk(raw, SR, 'He waited. Yes.')
