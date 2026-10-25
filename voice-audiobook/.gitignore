@@ -1,0 +1,4 @@
+# the app downloaded by setup_mac.command (several GB once models are in it)
+ebook2audiobook/
+__pycache__/
+*_clean.txt
