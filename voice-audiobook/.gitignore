@@ -2,3 +2,4 @@
 ebook2audiobook/
 __pycache__/
 *_clean.txt
+node_modules

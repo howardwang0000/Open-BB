@@ -1,0 +1,265 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Voice Audiobook</title>
+<meta name="description" content="Turn a PDF into an audiobook read in your own voice. Runs in your browser; nothing is uploaded.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible+Next:wght@400;600;700&family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one column, four steps in the order you do them; a recording-studio console in tone. */
+:root {
+  --bg: #eef1f5;
+  --surface: #ffffff;
+  --ink: #17202b;
+  --muted: #586373;
+  --line: #d5dbe4;
+  --accent: #d1432b;      /* the red "recording" lamp */
+  --accent-soft: #fbe3de;
+  --go: #23735f;          /* progress, ready */
+  --go-soft: #dcefe9;
+  --warn: #8a5a00;
+  --warn-soft: #fbefd5;
+  --wave: #3b4a5e;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "Atkinson Hyperlegible Next", "Atkinson Hyperlegible", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --radius: 10px;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f141b; --surface: #171e28; --ink: #e5e9ef; --muted: #9aa5b4; --line: #2b3542;
+    --accent: #ff6b4f; --accent-soft: #3a1f1a; --go: #51c4a5; --go-soft: #15332b;
+    --warn: #f0c063; --warn-soft: #362a12; --wave: #9fb3cc; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f141b; --surface: #171e28; --ink: #e5e9ef; --muted: #9aa5b4; --line: #2b3542;
+  --accent: #ff6b4f; --accent-soft: #3a1f1a; --go: #51c4a5; --go-soft: #15332b;
+  --warn: #f0c063; --warn-soft: #362a12; --wave: #9fb3cc; color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  font: 16px/1.55 var(--body);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: env(safe-area-inset-top, 0px) env(safe-area-inset-bottom, 0px);
+}
+.wrap { max-width: 760px; margin: 0 auto; }
+h1, h2 { font-family: var(--display); text-wrap: balance; margin: 0; }
+h1 { font-size: clamp(2.2rem, 6vw, 3.4rem); font-weight: 800; letter-spacing: -0.02em; line-height: 1.05; }
+h2 { font-size: 1.35rem; font-weight: 600; }
+p { margin: 0; }
+small, .meta { color: var(--muted); font-size: 0.875rem; }
+.mono, .stat b { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+
+.masthead { padding-block: 40px 28px; }
+.masthead .wrap { display: grid; gap: 10px; }
+.eyebrow { font-size: 0.78rem; text-transform: uppercase; letter-spacing: 0.08em; color: var(--muted); font-weight: 600; }
+.lede { font-size: 1.15rem; color: var(--muted); max-width: 34em; }
+
+main { display: grid; gap: 18px; padding-bottom: 48px; }
+.step { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 22px; display: grid; gap: 14px; min-width: 0; }
+.step-head { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.step-no {
+  width: 30px; height: 30px; border-radius: 50%; display: grid; place-items: center; flex: none;
+  font: 600 0.95rem var(--mono); border: 1.5px solid var(--ink);
+}
+.step-head h2 { flex: 1 1 auto; min-width: 0; }
+.pill { font-size: 0.8rem; font-weight: 600; padding: 3px 10px; border-radius: 999px; background: var(--bg); color: var(--muted); white-space: nowrap; }
+.pill.ok { background: var(--go-soft); color: var(--go); }
+.pill.busy { background: var(--accent-soft); color: var(--accent); }
+.pill.warn { background: var(--warn-soft); color: var(--warn); }
+
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+.btn {
+  font: 600 0.95rem var(--body); color: var(--ink); background: var(--surface);
+  border: 1.5px solid var(--line); border-radius: 8px; padding: 10px 16px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px; text-decoration: none; line-height: 1.2;
+}
+.btn:hover:not(:disabled) { border-color: var(--ink); }
+.btn:focus-visible, textarea:focus-visible, input:focus-visible + .drop-face, .drop:focus-within { outline: 3px solid color-mix(in srgb, var(--go) 60%, transparent); outline-offset: 2px; }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+.btn.primary { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.btn.record .lamp { width: 10px; height: 10px; border-radius: 50%; background: var(--accent); }
+.btn.recording { border-color: var(--accent); color: var(--accent); }
+.btn.recording .lamp { animation: blink 1s steps(2, start) infinite; }
+@keyframes blink { to { visibility: hidden; } }
+@media (prefers-reduced-motion: reduce) { .btn.recording .lamp, .lamp.on { animation: none; } }
+
+.prompt {
+  margin: 0; padding: 12px 16px; border-left: 3px solid var(--accent); background: var(--bg);
+  border-radius: 0 8px 8px 0; font-size: 1.02rem; max-width: 40em;
+}
+.prompt small { display: block; margin-top: 6px; }
+.voice-card { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; min-width: 0; }
+.voice-card canvas { width: 100%; height: 44px; display: block; min-width: 0; }
+.level { height: 6px; background: var(--bg); border-radius: 3px; overflow: hidden; }
+.level span { display: block; height: 100%; width: 0; background: var(--accent); transition: width 60ms linear; }
+
+.drop {
+  display: grid; place-items: center; text-align: center; gap: 4px; padding: 22px 16px;
+  border: 1.5px dashed var(--line); border-radius: 8px; cursor: pointer; color: var(--muted);
+}
+.drop strong { color: var(--ink); }
+.drop.over { border-color: var(--go); background: var(--go-soft); }
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.chip { font-size: 0.8rem; padding: 2px 9px; border-radius: 999px; border: 1px solid var(--line); color: var(--muted); }
+details { font-size: 0.9rem; }
+details summary { cursor: pointer; color: var(--muted); }
+details ul { margin: 8px 0 0; padding-left: 18px; max-height: 220px; overflow: auto; color: var(--muted); }
+details li span { font-family: var(--mono); font-size: 0.75rem; text-transform: uppercase; margin-right: 6px; }
+label.field { display: grid; gap: 6px; font-weight: 600; }
+label.field small { font-weight: 400; }
+textarea {
+  width: 100%; min-height: 260px; resize: vertical; padding: 14px; border-radius: 8px;
+  border: 1.5px solid var(--line); background: var(--bg); color: var(--ink);
+  font: 0.98rem/1.6 var(--body);
+}
+
+.progress { display: grid; gap: 6px; }
+.bar { height: 10px; border-radius: 5px; background: var(--bg); border: 1px solid var(--line); overflow: hidden; }
+.bar span { display: block; height: 100%; width: 0; background: var(--go); transition: width 200ms ease; }
+.note { padding: 10px 14px; border-radius: 8px; background: var(--warn-soft); color: var(--warn); font-size: 0.92rem; }
+.error { color: var(--accent); font-weight: 600; }
+
+.slider { display: grid; grid-template-columns: auto 1fr auto; gap: 12px; align-items: center; max-width: 460px; }
+.slider input { width: 100%; accent-color: var(--ink); }
+.onair { display: inline-flex; align-items: center; gap: 8px; font: 600 0.78rem var(--mono); letter-spacing: 0.1em; text-transform: uppercase; color: var(--muted); }
+.lamp { width: 10px; height: 10px; border-radius: 50%; background: var(--line); }
+.lamp.on { background: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); animation: pulse 1.6s ease-in-out infinite; }
+@keyframes pulse { 50% { box-shadow: 0 0 0 7px transparent; } }
+.stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+.stat { display: grid; gap: 2px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 8px; }
+.stat b { font-size: 1.15rem; font-weight: 500; }
+.stat small { font-size: 0.78rem; }
+.now { font-size: 0.95rem; color: var(--muted); border-left: 3px solid var(--line); padding-left: 12px; min-height: 1.5em; overflow-wrap: anywhere; }
+audio { width: 100%; }
+
+.about { display: grid; gap: 10px; color: var(--muted); font-size: 0.92rem; padding-top: 6px; }
+.about h2 { font-size: 1.05rem; color: var(--ink); }
+.about ul { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+a { color: inherit; }
+</style>
+<script defer src="https://cdn.jsdelivr.net/npm/lamejs@1.2.1/lame.min.js"></script>
+<script type="module" src="app.js"></script>
+<script>
+  // If the app's libraries cannot load (no connection, blocked CDN), say so instead of sitting idle.
+  setTimeout(() => {
+    if (document.documentElement.dataset.ready) return
+    const note = document.getElementById('compat')
+    note.textContent = 'The app did not finish loading. Check your internet connection and reload the page.'
+    note.hidden = false
+  }, 20000)
+</script>
+</head>
+<body>
+<header class="masthead">
+  <div class="wrap">
+    <p class="eyebrow">Free · runs on your computer · nothing is uploaded</p>
+    <h1>Voice Audiobook</h1>
+    <p class="lede">Turn a PDF into an audiobook read in your own voice. Record ten seconds of your voice, drop in a document, and get an MP3.</p>
+    <p class="note" id="compat" hidden></p>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="step" id="step-voice" aria-labelledby="h-voice">
+    <div class="step-head"><span class="step-no">1</span><h2 id="h-voice">Your voice</h2><span class="pill" id="voice-pill">Not recorded</span></div>
+    <p>Read this passage aloud in the voice you want for the audiobook: calm and clear, in a quiet room.</p>
+    <blockquote class="prompt">
+      The river began as a thin silver thread high in the mountains, where the snow never quite melted.
+      Nobody in the valley could say exactly where it started, and the old maps disagreed with one another.
+      <small>About 10 seconds. You can also use any recording of yourself between 5 and 30 seconds long.</small>
+    </blockquote>
+    <div class="row">
+      <button class="btn record" id="record-btn" type="button"><span class="lamp" aria-hidden="true"></span><span id="record-label">Record</span></button>
+      <label class="btn" for="voice-file">Choose a recording…</label>
+      <input type="file" id="voice-file" accept="audio/*,.m4a,.mp3,.wav,.aiff,.ogg,.webm" hidden>
+      <span class="meta mono" id="record-timer" hidden>0.0 s</span>
+    </div>
+    <div class="level" id="record-level" hidden><span></span></div>
+    <div class="voice-card" id="voice-card" hidden>
+      <button class="btn" id="voice-play" type="button" aria-label="Play your voice sample">Play</button>
+      <canvas id="voice-wave" width="600" height="88" aria-hidden="true"></canvas>
+      <span class="meta mono" id="voice-seconds"></span>
+    </div>
+    <p class="error" id="voice-error" role="alert" hidden></p>
+  </section>
+
+  <section class="step" id="step-doc" aria-labelledby="h-doc">
+    <div class="step-head"><span class="step-no">2</span><h2 id="h-doc">Your document</h2><span class="pill" id="doc-pill">Example text</span></div>
+    <label class="drop" id="drop" for="doc-file">
+      <strong>Drop a PDF here, or choose a file</strong>
+      <span>PDF or plain text. Page numbers, headers, footnotes and split words are cleaned up for you.</span>
+    </label>
+    <input type="file" id="doc-file" accept=".pdf,.txt,.md,application/pdf,text/plain" hidden>
+    <div class="progress" id="doc-progress" hidden><div class="bar"><span></span></div><small class="mono"></small></div>
+    <div class="chips" id="doc-chips" hidden></div>
+    <details id="removed" hidden><summary>See what was removed</summary><ul id="removed-list"></ul></details>
+    <label class="field" for="doc-text">What will be read
+      <small>Edit anything you like. A blank line starts a new paragraph; a line starting with # is a chapter heading.</small>
+    </label>
+    <textarea id="doc-text" spellcheck="false"></textarea>
+    <p class="meta" id="doc-meta"></p>
+    <p class="error" id="doc-error" role="alert" hidden></p>
+  </section>
+
+  <section class="step" id="step-engine" aria-labelledby="h-engine">
+    <div class="step-head"><span class="step-no">3</span><h2 id="h-engine">Voice engine</h2><span class="pill" id="engine-pill">Not downloaded</span></div>
+    <p>Chatterbox, a free voice-cloning model from Resemble AI, runs inside this page. It downloads once (about 1.5 GB) and your browser keeps it for next time. Your voice and your document never leave this computer.</p>
+    <div class="row"><button class="btn primary" id="load-btn" type="button">Download the voice engine</button></div>
+    <div class="progress" id="load-progress" hidden><div class="bar"><span></span></div><small class="mono"></small></div>
+    <p class="meta" id="engine-status"></p>
+    <p class="error" id="engine-error" role="alert" hidden></p>
+  </section>
+
+  <section class="step" id="step-make" aria-labelledby="h-make">
+    <div class="step-head"><span class="step-no">4</span><h2 id="h-make">Make the audiobook</h2><span class="onair"><span class="lamp" id="lamp" aria-hidden="true"></span><span id="onair-label">Idle</span></span></div>
+    <div class="slider">
+      <small>Calm</small>
+      <input type="range" id="expressive" min="0.25" max="1" step="0.05" value="0.5" aria-label="How expressive the reading is">
+      <small>Lively</small>
+    </div>
+    <div class="row">
+      <button class="btn" id="sample-btn" type="button">Hear a sample</button>
+      <button class="btn primary" id="make-btn" type="button">Make the audiobook</button>
+      <button class="btn" id="stop-btn" type="button" hidden>Pause</button>
+    </div>
+    <div id="job" class="progress" hidden>
+      <div class="bar"><span></span></div>
+      <div class="stats">
+        <div class="stat"><small>Sentences</small><b id="stat-chunks">0 / 0</b></div>
+        <div class="stat"><small>Audio made</small><b id="stat-audio">0 s</b></div>
+        <div class="stat"><small>Time left</small><b id="stat-left">–</b></div>
+        <div class="stat"><small>Speed</small><b id="stat-speed">–</b></div>
+      </div>
+      <p class="now" id="now-reading"></p>
+    </div>
+    <audio id="player" controls hidden></audio>
+    <div class="row">
+      <button class="btn" id="listen-btn" type="button" hidden>Listen to what's done</button>
+      <a class="btn primary" id="download-link" hidden download>Download MP3</a>
+    </div>
+    <p class="error" id="make-error" role="alert" hidden></p>
+  </section>
+
+  <section class="about" aria-labelledby="h-about">
+    <h2 id="h-about">Good to know</h2>
+    <ul>
+      <li>Use Chrome, or Safari 26 or later, on a Mac with Apple silicon. They let the model use the graphics chip; other browsers can be many times slower.</li>
+      <li>Try “Hear a sample” first. A long book takes hours: plug in the charger, keep this tab open, and the screen stays awake while it works.</li>
+      <li>Progress is saved as you go. If the tab closes, open this page again with the same text and voice and press “Make the audiobook” to carry on.</li>
+      <li>Scanned PDFs (photos of pages) have no text to read. Copy the text in by hand or use a PDF with real text.</li>
+      <li>Only clone a voice you have the right to use: your own, or with the speaker’s permission.</li>
+    </ul>
+  </section>
+</main>
+</body>
+</html>

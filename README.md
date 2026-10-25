@@ -98,5 +98,6 @@ Add an entry to `src/data.js`:
 ## Also in this repo: PDF → audiobook in your own voice
 
 The [`voice-audiobook/`](voice-audiobook/) folder is a separate tool (not part of the app):
-it sets up the open-source ebook2audiobook on a Mac, with fixes for messy PDFs and smoother
+a free page that runs in your browser ([`voice-audiobook/web/`](voice-audiobook/web/)), and a
+setup for the open-source ebook2audiobook on a Mac, both with fixes for messy PDFs and smoother
 audio. See [`voice-audiobook/README.md`](voice-audiobook/README.md).

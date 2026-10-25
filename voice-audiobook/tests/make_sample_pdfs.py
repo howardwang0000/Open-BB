@@ -427,8 +427,11 @@ def make_paper(path: str) -> tuple[list[str], int]:
 
 
 if __name__ == '__main__':
+    import json
     import sys
     out = sys.argv[1] if len(sys.argv) > 1 else '.'
-    for name, fn in (('book.pdf', make_book), ('paper.pdf', make_paper)):
-        exp, n = fn(f'{out}/{name}')
-        print(f'{name}: {len(exp)} paragraphs, {n} hyphenated line breaks')
+    for name, fn in (('book', make_book), ('paper', make_paper)):
+        exp, n = fn(f'{out}/{name}.pdf')
+        with open(f'{out}/{name}.expected.json', 'w', encoding='utf-8') as f:
+            json.dump(exp, f, ensure_ascii=False, indent=1)
+        print(f'{name}.pdf: {len(exp)} paragraphs, {n} hyphenated line breaks')

@@ -1,6 +1,50 @@
-# Voice Audiobook — turn a PDF into audio in your own voice (Mac)
+# Voice Audiobook — turn a PDF into audio in your own voice
 
-This folder sets up **[ebook2audiobook](https://github.com/DrewThomasson/ebook2audiobook)**
+There are two ways to use this folder. Both are free, need no account and no credits, and keep
+your voice and documents on your own computer.
+
+| | **Browser version** (`web/`) | **Mac app** (ebook2audiobook) |
+|---|---|---|
+| Install | Nothing: open a web page | One setup script, 20–40 minutes |
+| Voice model | Chatterbox (Resemble AI), from a 5–10 s sample | XTTS‑v2, from a 1–3 min sample |
+| Languages | English | English and many others |
+| Output | One MP3 | M4B with chapters, MP3 and more |
+| Best for | Trying it today, articles, notes, short books | Long books, other languages |
+
+Both clean messy PDFs and smooth the joins between sentences in the same way (the browser
+version is a JavaScript port of the same code, tested against it).
+
+---
+
+## Browser version
+
+**Open it:** https://howardwang0000.github.io/Open-BB/voice-audiobook/web/
+
+The page lives in this repository. If the link shows "404", GitHub Pages needs switching on once:
+on GitHub open the repository → **Settings** → **Pages** → under *Build and deployment* set
+**Source** to *Deploy from a branch*, pick the branch with the `voice-audiobook` folder
+(`claude/jolly-turing-0cxnhj` until it is merged) and **/ (root)**, then **Save**. The page is
+live about a minute later.
+
+Then, in **Chrome or Safari 26+ on a Mac with Apple silicon**:
+
+1. **Your voice:** press *Record* and read the passage on screen (about 10 seconds), or choose a recording.
+2. **Your document:** drop in a PDF. Check the text in the box (you can edit it) and the list of what was removed.
+3. **Voice engine:** press *Download the voice engine*. About 1.5 GB the first time; your browser keeps it.
+4. **Make the audiobook:** press *Hear a sample* first, then *Make the audiobook*, then *Download MP3*.
+
+Progress is saved as it goes: if the tab closes, open the page again and press the button to carry on.
+How fast it is depends on your Mac's graphics chip; the page shows its speed and the time left.
+
+For developers: `cd web && npm install && npm test` (unit tests, including a check that the
+JavaScript audio smoothing matches `smooth_joins.py`), and `node tests/e2e.cjs` (the whole page in
+Chromium with a stand-in voice model). Both need a Python with reportlab and numpy (`PYTHON=...`).
+
+---
+
+## Mac app
+
+This sets up **[ebook2audiobook](https://github.com/DrewThomasson/ebook2audiobook)**
 (free, open source, runs on your own Mac) with two fixes added on top:
 
 | Problem in the original | What this version does |
@@ -12,7 +56,9 @@ This folder sets up **[ebook2audiobook](https://github.com/DrewThomasson/ebook2a
 
 ## How close will it sound to you? (honest answer)
 
-It uses **XTTS‑v2**, a voice model that copies a voice from a short recording ("zero-shot cloning").
+Both versions copy a voice from a short recording ("zero-shot cloning"). The notes below are
+about XTTS‑v2 in the Mac app; Chatterbox in the browser works the same way: it copies the sound of
+your voice from a sample, not your personal way of reading.
 
 * **What it copies well:** the pitch and tone of your voice, roughly your accent. People who know you
   will usually recognise it as *your voice*.
