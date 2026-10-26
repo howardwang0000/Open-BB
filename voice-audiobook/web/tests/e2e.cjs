@@ -41,28 +41,42 @@ function speechWav(file, seconds) {
   fs.writeFileSync(file, buf)
 }
 
+function makeEngineFolder(dir, files) {
+  for (const [name, size] of Object.entries(files)) {
+    fs.mkdirSync(path.dirname(path.join(dir, name)), { recursive: true })
+    fs.writeFileSync(path.join(dir, name), Buffer.alloc(size, 7))
+  }
+}
+
+async function newContext(browser, { offline = false } = {}) {
+  const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1100, height: 900 } })
+  await context.route('https://cdn.jsdelivr.net/**', (route) => {
+    const file = CDN[route.request().url()]
+    if (!file) return route.abort()
+    // "offline": the stand-in model behaves as if huggingface.co were blocked
+    const body = (offline && file.endsWith('fake-transformers.js') ? 'globalThis.__FAKE_OFFLINE__ = true;\n' : '') + fs.readFileSync(file, 'utf8')
+    route.fulfill({ body, contentType: 'text/javascript', headers: { 'access-control-allow-origin': '*' } })
+  })
+  await context.route(/fonts\.(googleapis|gstatic)\.com/, (route) => route.fulfill({ body: '', contentType: 'text/css' }))
+  return context
+}
+
 async function main() {
   const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'va-e2e-'))
   execFileSync(process.env.PYTHON || 'python3', [path.join(WEB, '../tests/make_sample_pdfs.py'), tmp])
   speechWav(path.join(tmp, 'me.wav'), 9)
   const expectedBook = JSON.parse(fs.readFileSync(path.join(tmp, 'book.expected.json'), 'utf8'))
 
-  const server = spawn(process.env.PYTHON || 'python3', ['-m', 'http.server', String(PORT), '--bind', '127.0.0.1', '--directory', WEB], { stdio: 'ignore' })
+  const server = spawn(process.env.PYTHON || 'python3', ['-m', 'http.server', String(PORT), '--bind', '127.0.0.1', '--directory', path.dirname(WEB)], { stdio: 'ignore' })
   await new Promise((r) => setTimeout(r, 800))
   const browser = await chromium.launch()
   const problems = []
   try {
-    const context = await browser.newContext({ acceptDownloads: true, viewport: { width: 1100, height: 900 } })
-    await context.route('https://cdn.jsdelivr.net/**', (route) => {
-      const file = CDN[route.request().url()]
-      if (!file) return route.abort()
-      route.fulfill({ path: file, contentType: 'text/javascript', headers: { 'access-control-allow-origin': '*' } })
-    })
-    await context.route(/fonts\.(googleapis|gstatic)\.com/, (route) => route.fulfill({ body: '', contentType: 'text/css' }))
+    const context = await newContext(browser)
     const page = await context.newPage()
     page.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`))
     page.on('console', (m) => { if (m.type() === 'error') problems.push(`console: ${m.text()}`) })
-    const url = `http://127.0.0.1:${PORT}/index.html`
+    const url = `http://127.0.0.1:${PORT}/web/index.html` // served like GitHub Pages: the folder above web/ is reachable
     await page.goto(url)
     await page.waitForFunction(() => document.documentElement.dataset.ready === 'true')
 
@@ -141,6 +155,41 @@ async function main() {
       const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
       assert.equal(overflow, 0, 'no sideways scrolling at phone width')
     }
+    // Engine files from a folder on the computer, when the download is blocked.
+    const offline = await newContext(browser, { offline: true })
+    const p2 = await offline.newPage()
+    p2.on('pageerror', (e) => problems.push(`pageerror: ${e.message}`))
+    await p2.goto(url)
+    await p2.waitForFunction(() => document.documentElement.dataset.ready === 'true')
+    await p2.setInputFiles('#voice-file', path.join(tmp, 'me.wav'))
+    await p2.waitForFunction(() => document.querySelector('#voice-pill').textContent === 'Ready')
+    await p2.click('#load-btn')
+    await p2.waitForFunction(() => !document.querySelector('#engine-error').hidden)
+    assert.match(await p2.textContent('#engine-error'), /could not be downloaded from huggingface\.co.*Use engine files from my computer/)
+    assert.equal(await p2.evaluate(() => document.querySelector('#engine-help').open), true)
+    const command = await p2.textContent('#engine-command')
+    assert.match(command, /^curl -fsSL http:\/\/127\.0\.0\.1:\d+\/get_voice_engine\.command \| bash$/)
+    const script = await p2.evaluate((u) => fetch(u).then((r) => r.text()), command.split(' ')[2])
+    assert.ok(script.startsWith('#!/usr/bin/env bash'), 'the command link serves the download script')
+
+    const partial = path.join(tmp, 'partial', 'chatterbox-ONNX')
+    makeEngineFolder(partial, { 'config.json': 20, 'onnx/embed_tokens.onnx': 100 })
+    await p2.setInputFiles('#engine-folder', partial)
+    await p2.waitForFunction(() => /incomplete/.test(document.querySelector('#engine-error').textContent))
+    assert.match(await p2.textContent('#engine-error'), /missing onnx\/speech_encoder\.onnx, onnx\/conditional_decoder\.onnx, onnx\/language_model_q4\.onnx/)
+
+    const around = path.join(tmp, 'Voice Audiobook engine')
+    makeEngineFolder(path.join(around, 'chatterbox-ONNX'), {
+      'config.json': 20, 'tokenizer.json': 30, 'onnx/embed_tokens.onnx': 1000, 'onnx/speech_encoder.onnx': 2000,
+      'onnx/conditional_decoder.onnx': 3000, 'onnx/language_model_q4.onnx': 4000, 'onnx/language_model_q4f16.onnx': 4000,
+    })
+    await p2.setInputFiles('#engine-folder', around) // the folder around it works too
+    await p2.waitForFunction(() => /Ready/.test(document.querySelector('#engine-pill').textContent))
+    assert.equal(await p2.isVisible('#engine-choices'), false)
+    await p2.click('#sample-btn')
+    await p2.waitForFunction(() => document.querySelector('#player').src.startsWith('blob:') && !document.querySelector('#sample-btn').disabled)
+    if (shots) await p2.screenshot({ path: path.join(shots, 'engine-folder.png'), fullPage: true })
+
     assert.deepEqual(problems.filter((p) => !/standardFontDataUrl|Failed to load resource/.test(p)), [])
     console.log('e2e: all checks passed')
   } finally {

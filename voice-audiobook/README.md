@@ -36,6 +36,25 @@ Then, in **Chrome or Safari 26+ on a Mac with Apple silicon**:
 Progress is saved as it goes: if the tab closes, open the page again and press the button to carry on.
 How fast it is depends on your Mac's graphics chip; the page shows its speed and the time left.
 
+### If the engine download fails: keep the engine on your Mac
+
+The engine is about 1.5 GB, too big for GitHub to host (Pages sites are limited to 1 GB), so the
+page normally fetches it from huggingface.co. If that fails (many school and office networks
+block the site, or the browser runs out of storage), keep the files on your Mac instead:
+
+1. On a network that allows huggingface.co (home Wi‑Fi or a phone hotspot), open **Terminal** and run
+   the command shown in step 3 of the page under *How to get the engine files onto your computer*:
+   ```bash
+   curl -fsSL https://howardwang0000.github.io/Open-BB/voice-audiobook/get_voice_engine.command | bash
+   ```
+   (or `bash get_voice_engine.command` in this folder). It saves the files to
+   **Documents › Voice Audiobook engine › chatterbox-ONNX**, skips anything already downloaded, and
+   carries on where it stopped if interrupted. If huggingface.co is blocked everywhere you are, a
+   mirror can be used: `HF_ENDPOINT=https://hf-mirror.com bash get_voice_engine.command`.
+2. In the page, press **Use engine files from my computer…** and choose the **chatterbox-ONNX**
+   folder. The page reads the files straight from disk: nothing is downloaded, and nothing is
+   copied into the browser. You choose the folder again each time you open the page.
+
 For developers: `cd web && npm install && npm test` (unit tests, including a check that the
 JavaScript audio smoothing matches `smooth_joins.py`), and `node tests/e2e.cjs` (the whole page in
 Chromium with a stand-in voice model). Both need a Python with reportlab and numpy (`PYTHON=...`).
@@ -186,6 +205,7 @@ headers, footnotes...). If something important was cut, or junk got through, you
 | `pdf_cleaner.py` | The PDF cleaner. Used inside the app, or on its own via `preview_pdf.command` |
 | `smooth_joins.py` | The audio smoothing used for every sentence the voice speaks |
 | `preview_pdf.command` | Shows the cleaned text of a PDF |
+| `get_voice_engine.command` | Downloads the browser version's voice engine into a folder on your Mac |
 | `tests/` | Automated tests. They build messy test PDFs (book with headers, footnotes and hyphenation; two-column paper with a figure) and check the output word-for-word, then check the audio joins |
 
 ### Limits worth knowing

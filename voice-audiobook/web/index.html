@@ -123,6 +123,16 @@ textarea {
   font: 0.98rem/1.6 var(--body);
 }
 
+.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.choice { display: grid; gap: 6px; align-content: start; justify-items: start; min-width: 0; }
+.btn.disabled { opacity: 0.45; pointer-events: none; }
+.howto { margin: 10px 0 0; padding-left: 20px; display: grid; gap: 8px; color: var(--ink); }
+#engine-help, .howto, .howto li { min-width: 0; }
+.command { display: flex; gap: 8px; align-items: center; margin-top: 6px; min-width: 0; }
+.command code {
+  flex: 1 1 auto; min-width: 0; overflow-x: auto; white-space: nowrap; padding: 8px 10px;
+  background: var(--bg); border: 1px solid var(--line); border-radius: 6px; font: 0.8rem var(--mono);
+}
 .progress { display: grid; gap: 6px; }
 .bar { height: 10px; border-radius: 5px; background: var(--bg); border: 1px solid var(--line); overflow: hidden; }
 .bar span { display: block; height: 100%; width: 0; background: var(--go); transition: width 200ms ease; }
@@ -212,12 +222,33 @@ a { color: inherit; }
   </section>
 
   <section class="step" id="step-engine" aria-labelledby="h-engine">
-    <div class="step-head"><span class="step-no">3</span><h2 id="h-engine">Voice engine</h2><span class="pill" id="engine-pill">Not downloaded</span></div>
-    <p>Chatterbox, a free voice-cloning model from Resemble AI, runs inside this page. It downloads once (about 1.5 GB) and your browser keeps it for next time. Your voice and your document never leave this computer.</p>
-    <div class="row"><button class="btn primary" id="load-btn" type="button">Download the voice engine</button></div>
+    <div class="step-head"><span class="step-no">3</span><h2 id="h-engine">Voice engine</h2><span class="pill" id="engine-pill">Not loaded</span></div>
+    <p>Chatterbox, a free voice-cloning model from Resemble AI, runs inside this page. Your voice and your document never leave this computer. Get the engine (about 1.5 GB) one of two ways:</p>
+    <div class="choices" id="engine-choices">
+      <div class="choice">
+        <button class="btn primary" id="load-btn" type="button">Download the voice engine</button>
+        <small>Straight into this browser, which keeps it for next time.</small>
+      </div>
+      <div class="choice">
+        <label class="btn" id="engine-folder-btn" for="engine-folder">Use engine files from my computer…</label>
+        <input type="file" id="engine-folder" webkitdirectory multiple hidden>
+        <small>If the download is blocked or fails. Choose the “chatterbox-ONNX” folder. Your browser may say “upload”: the files stay on your computer.</small>
+      </div>
+    </div>
     <div class="progress" id="load-progress" hidden><div class="bar"><span></span></div><small class="mono"></small></div>
     <p class="meta" id="engine-status"></p>
     <p class="error" id="engine-error" role="alert" hidden></p>
+    <details id="engine-help">
+      <summary>How to get the engine files onto your computer</summary>
+      <ol class="howto">
+        <li>Use a network that allows huggingface.co (home Wi‑Fi or a phone hotspot work if a school or office network blocks it).</li>
+        <li>Open <b>Terminal</b> (press ⌘‑Space, type Terminal, press Enter), paste this line and press Enter:
+          <div class="command"><code id="engine-command"></code><button class="btn" id="copy-command" type="button">Copy</button></div>
+        </li>
+        <li>It saves the files to <b>Documents › Voice Audiobook engine › chatterbox-ONNX</b> and opens that folder. If it stops, run it again: it carries on where it left off.</li>
+        <li>Back here, press <b>Use engine files from my computer…</b> and choose the <b>chatterbox-ONNX</b> folder. Do this each time you open the page; it takes a few seconds.</li>
+      </ol>
+    </details>
   </section>
 
   <section class="step" id="step-make" aria-labelledby="h-make">

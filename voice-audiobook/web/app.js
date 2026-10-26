@@ -118,45 +118,88 @@ const engine = (() => {
   }
 })()
 
-async function loadEngine() {
+// Turns a failure into something a person can act on; the raw message is kept for help requests.
+function explainEngineError(err, fromFolder) {
+  const raw = err?.message || String(err)
+  let advice = raw
+  if (fromFolder) advice = `The engine files could not be used: ${raw}`
+  else if (/quota|storage|space/i.test(raw)) advice = 'Your browser ran out of storage space for the voice engine. Use “Use engine files from my computer” instead.'
+  else if (/fetch|network|load failed|connection|\b40[34]\b|\b5\d\d\b|ERR_/i.test(raw)) {
+    advice = 'The voice engine could not be downloaded from huggingface.co. Some networks (many schools and offices) block it. Use “Use engine files from my computer” instead.'
+  }
+  return advice === raw ? raw : `${advice} (Details: ${raw})`
+}
+
+/** files: optional { relativePath: File } from a folder on this computer. */
+async function loadEngine(files = null) {
   if (state.engineReady) return true
   if (state.engineLoading) return state.engineLoading
   state.engineLoading = (async () => {
     showError('engine-error', '')
-    setPill('engine-pill', 'Downloading', 'busy')
+    setPill('engine-pill', files ? 'Loading' : 'Downloading', 'busy')
     $('load-btn').disabled = true
-    $('engine-status').textContent = 'Downloading the voice engine. The first time takes a while; after that it loads from your browser in seconds.'
+    $('engine-folder-btn').classList.add('disabled')
+    $('engine-status').textContent = files
+      ? 'Loading the voice engine from your computer.'
+      : 'Downloading the voice engine. The first time takes a while; after that it loads from your browser in seconds.'
     setBar('load-progress', 0, 'Starting…')
-    engine.onProgress((files) => {
+    engine.onProgress((progress) => {
       let loaded = 0
       let total = 0
-      for (const f of files.values()) { loaded += f.loaded || 0; total += f.total || 0 }
+      for (const f of progress.values()) { loaded += f.loaded || 0; total += f.total || 0 }
       setBar('load-progress', total ? loaded / total : 0, total ? `${mb(loaded)} of ${mb(total)}` : 'Starting…')
     })
     try {
-      const { device } = await engine.call('load')
+      const { device } = await engine.call('load', files ? { files } : {})
       state.engineReady = true
       show('load-progress', false)
-      $('load-btn').hidden = true
+      show('engine-choices', false)
       const gpu = device !== 'wasm'
       setPill('engine-pill', gpu ? 'Ready' : 'Ready (slow mode)', gpu ? 'ok' : 'warn')
       $('engine-status').textContent = gpu
         ? 'Ready. It is using your computer’s graphics chip (WebGPU).'
         : 'Ready, but this browser cannot use the graphics chip, so making audio will be slow. Chrome or Safari 26+ on a Mac is much faster.'
-      navigator.storage?.persist?.().catch(() => {})
+      if (!files) navigator.storage?.persist?.().catch(() => {})
       await syncVoice()
       return true
     } catch (err) {
-      setPill('engine-pill', 'Not downloaded', 'warn')
-      showError('engine-error', `${err.message} Press the button to try again.`)
+      setPill('engine-pill', 'Not loaded', 'warn')
+      show('load-progress', false)
+      $('engine-status').textContent = ''
+      showError('engine-error', explainEngineError(err, Boolean(files)))
+      $('engine-help').open = true
       $('load-btn').disabled = false
-      $('load-btn').textContent = 'Try again'
+      $('load-btn').textContent = 'Try the download again'
       return false
     } finally {
+      $('engine-folder-btn').classList.remove('disabled')
       state.engineLoading = null
     }
   })()
   return state.engineLoading
+}
+
+const REQUIRED_ENGINE_FILES = ['config.json', 'onnx/embed_tokens.onnx', 'onnx/speech_encoder.onnx', 'onnx/conditional_decoder.onnx']
+
+/** The files of a chosen folder, keyed by their path inside the engine folder. */
+function engineFilesFrom(fileList) {
+  const all = [...fileList]
+  const paths = all.map((f) => f.webkitRelativePath || f.name)
+  // The engine folder is wherever config.json sits next to an onnx/ folder, so picking
+  // the folder itself or the one around it both work.
+  const root = paths
+    .filter((p) => /(^|\/)config\.json$/.test(p))
+    .map((p) => p.slice(0, -'config.json'.length))
+    .find((dir) => paths.some((p) => p.startsWith(`${dir}onnx/`)))
+  if (root === undefined) {
+    throw new Error('That folder does not contain the voice engine. Choose the “chatterbox-ONNX” folder made by the download command below.')
+  }
+  const files = {}
+  all.forEach((f, i) => { if (paths[i].startsWith(root)) files[paths[i].slice(root.length)] = f })
+  const missing = REQUIRED_ENGINE_FILES.filter((p) => !files[p])
+  if (!files['onnx/language_model_q4.onnx'] && !files['onnx/language_model_q4f16.onnx']) missing.push('onnx/language_model_q4.onnx')
+  if (missing.length) throw new Error(`The engine folder is incomplete (missing ${missing.join(', ')}). Run the download command again; it carries on where it stopped.`)
+  return files
 }
 
 async function syncVoice() {
@@ -557,7 +600,27 @@ async function start() {
   window.matchMedia('(prefers-color-scheme: dark)').addEventListener?.('change', redrawVoice)
   $('expressive').addEventListener('change', refreshResumeHint)
 
-  $('load-btn').addEventListener('click', loadEngine)
+  $('load-btn').addEventListener('click', () => loadEngine())
+  $('engine-folder').addEventListener('change', (e) => {
+    const list = e.target.files
+    if (!list?.length || state.engineReady || state.engineLoading) return
+    try {
+      loadEngine(engineFilesFrom(list))
+    } catch (err) {
+      showError('engine-error', err.message)
+    }
+    e.target.value = ''
+  })
+  // The command that fetches the engine files, pointing at wherever this page is hosted.
+  $('engine-command').textContent = `curl -fsSL ${new URL('../get_voice_engine.command', location.href).href} | bash`
+  $('copy-command').addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText($('engine-command').textContent)
+      $('copy-command').textContent = 'Copied'
+    } catch {
+      getSelection().selectAllChildren($('engine-command'))
+    }
+  })
   $('sample-btn').addEventListener('click', hearSample)
   $('make-btn').addEventListener('click', makeAudiobook)
   $('stop-btn').addEventListener('click', () => {

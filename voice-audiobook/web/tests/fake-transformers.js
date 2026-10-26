@@ -12,10 +12,34 @@ export class Tensor {
   }
 }
 
-export const env = {}
+// Same defaults as transformers.js in a worker.
+export const env = { allowRemoteModels: true, allowLocalModels: false, useCustomCache: false, customCache: null }
+
+const REMOTE = 'https://huggingface.co/onnx-community/chatterbox-ONNX/resolve/main/'
+const LOCAL = '/models/onnx-community/chatterbox-ONNX/'
+
+// Like transformers.js: refuse an impossible setup, then look each file up in the custom
+// cache (local path first, then the Hugging Face URL), else "download" it.
+async function getFile(name, progress) {
+  if (!env.allowLocalModels && !env.allowRemoteModels) throw new Error('Invalid configuration detected: both local and remote models are disabled.')
+  if (env.useCustomCache) {
+    const hit = (await env.customCache.match(LOCAL + name)) || (await env.customCache.match(REMOTE + name))
+    if (hit) {
+      const bytes = new Uint8Array(await hit.arrayBuffer())
+      if (Number(hit.headers.get('content-length')) !== bytes.length) throw new Error(`fake: bad content-length for ${name}`)
+      progress?.({ status: 'progress', file: name, loaded: bytes.length, total: bytes.length })
+      return bytes
+    }
+    if (!env.allowRemoteModels) throw new Error(`file was not found locally at "${LOCAL + name}"`)
+  }
+  if (globalThis.__FAKE_OFFLINE__) throw new TypeError('Failed to fetch')
+  progress?.({ status: 'progress', file: name, loaded: 1e6, total: 1e6 })
+  return new Uint8Array(0)
+}
 
 export class AutoProcessor {
   static async from_pretrained() {
+    await getFile('tokenizer.json')
     return { _call: async (text) => ({ input_ids: new Tensor('int64', new BigInt64Array(text.length), [1, text.length]), __text: text }) }
   }
 }
@@ -25,10 +49,17 @@ const random = () => ((seed = (seed * 16807) % 2147483647) / 2147483647)
 const SR = 24000
 
 export class ChatterboxModel {
-  static async from_pretrained(_id, { progress_callback } = {}) {
-    for (const [file, total] of [['language_model_q4.onnx', 400e6], ['conditional_decoder.onnx', 700e6], ['speech_encoder.onnx', 400e6]]) {
-      for (let f = 0; f <= 1; f += 0.25) progress_callback?.({ status: 'progress', file, loaded: total * f, total })
-      progress_callback?.({ status: 'done', file, loaded: total, total })
+  static async from_pretrained(_id, { progress_callback, dtype } = {}) {
+    await getFile('config.json', progress_callback)
+    for (const part of ['embed_tokens', 'speech_encoder', 'language_model', 'conditional_decoder']) {
+      const suffix = { fp32: '', q4: '_q4', q4f16: '_q4f16' }[dtype[part]]
+      await getFile(`onnx/${part}${suffix}.onnx`, progress_callback)
+    }
+    if (!env.useCustomCache) {
+      for (const [file, total] of [['language_model_q4.onnx', 400e6], ['conditional_decoder.onnx', 700e6], ['speech_encoder.onnx', 400e6]]) {
+        for (let f = 0; f <= 1; f += 0.25) progress_callback?.({ status: 'progress', file, loaded: total * f, total })
+        progress_callback?.({ status: 'done', file, loaded: total, total })
+      }
     }
     return new ChatterboxModel()
   }
